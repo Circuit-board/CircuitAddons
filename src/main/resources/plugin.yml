@@ -1,0 +1,22 @@
+name: CircuitAddons
+version: '1.0'
+main: cool.circuit.circuitAddons.CircuitAddons
+api-version: '1.21'
+commands:
+  circuitaddons:
+    description: 'A utility plugin for 1.21.4'
+    permission: coolcircuit.menu
+    aliases: [ca]
+  alltitle:
+    description: 'Display a title for all players'
+    aliases: [at,atitle,allt]
+  manage:
+    description: 'Manage a player'
+  sethome:
+    description: 'Sets a home'
+  home:
+    description: 'Teleports to a home'
+  setspawn:
+    description: 'Sets the spawn point!'
+  spawn:
+    description: 'Teleports to the spawn point!'
