@@ -1,0 +1,37 @@
+# type /ca reload or /circuitaddons reload in chat to save changes!
+
+settings:
+  joinMessage: true
+  prefix: '&0[&6CircuitAddons&0] &6' #https://easycodetools.com/tool/Minecraft-Text-Generator
+  server_name: 'Your server'
+messages:
+  joinMessage: 'Welcome back to {server_name}, {player}!'
+  firstJoinMessage: 'Welcome to {server_name}, {player}!'
+guis:
+  manage:
+    enabled: true
+  main:
+    enabled: true
+  alltitle:
+    enabled: true
+rewards:
+  firstJoin:
+    items:
+      - 'STONE_SWORD:1'
+      - 'STONE_PICKAXE:1'
+      - 'STONE_AXE:1'
+events:
+  playerJoin:
+    fireworks:
+      enabled: true
+      color: [255, 215, 0] # Must fit RGB format
+      pattern: STAR
+    title:
+      enabled: true
+      title: "&6Welcome To {server_name}!"
+      subtitle: "&bHave fun!"
+
+# Don't modify unless you know what you are doing!
+
+players: {}
+
