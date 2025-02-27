@@ -1,5 +1,5 @@
 name: CircuitAddons
-version: '1.0'
+version: '1.1.5'
 main: cool.circuit.circuitAddons.CircuitAddons
 api-version: '1.21'
 
@@ -27,6 +27,7 @@ commands:
     permission: circuitaddons.balcheck
   shop:
     description: 'Opens the shop!'
+    permission: circuitaddons.shop
   economy:
     aliases: [eco]
     description: 'Economy related stuff.'
@@ -34,6 +35,55 @@ commands:
   banks:
     description: 'Shows all banks.'
     permission: circuitaddons.banks
-
-
-depend: [Vault]
+  mute:
+    description: 'Mutes a player'
+    permission: circuitaddons.mute
+  unmute:
+    description: 'Unmutes a player'
+    permission: circuitaddons.unmute
+  blacklist:
+    description: 'Adds words to the blacklist'
+    permission: circuitaddons.blacklist
+  biome:
+    description: 'Shows what biome you are in!'
+    permission: circuitaddons.biome
+  gma:
+    description: 'Sets your gamemode to adventure!'
+    permission: circuitaddons.gma
+  gmc:
+    description: 'Sets your gamemode to creative!'
+    permission: circuitaddons.gmc
+  gms:
+    description: 'Sets your gamemode to survival!'
+    permission: circuitaddons.gms
+  gmsp:
+    description: 'Sets your gamemode to spectator!'
+    permission: circuitaddons.gmsp
+  slotguesser:
+    description: 'A little minigame'
+    permission: circuitaddons.slotguesser
+  paintdrying:
+    description: 'A paint drying simulator'
+    permission: circuitaddons.paintdrying
+  minecraft:
+    description: 'Literal minecraft inside of minecraft!'
+    permission: circuitaddons.minecraft
+  createentity:
+    description: 'Creates an entity!'
+    permission: circuitaddons.createentity
+  enchanting:
+    description: 'Enchanting table!'
+    permission: circuitaddons.enchanting
+  heal:
+    description: 'Heals a player'
+    permission: circuitaddons.heal
+  nick:
+    description: 'Nicks a player'
+    permission: circuitaddons.nick
+  unnick:
+    description: 'Removes a nick name from a player'
+    permission: circuitaddons.unnick
+  npc:
+    description: 'Creates an npc'
+    permission: circuitaddons.npc
+depend: [Vault, PlaceholderAPI, LuckPerms]

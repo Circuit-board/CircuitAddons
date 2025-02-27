@@ -4,7 +4,12 @@ import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.OfflinePlayer;
 
+import java.io.IOException;
 import java.util.*;
+
+import static cool.circuit.circuitAddons.CircuitAddons.banks;
+import static cool.circuit.circuitAddons.CircuitAddons.banksFile;
+import static cool.circuit.circuitAddons.utils.NumberFormatter.formatNumber;
 
 public class CircuitEconomy implements Economy {
 
@@ -154,6 +159,11 @@ public class CircuitEconomy implements Economy {
             return new EconomyResponse(0, 0, EconomyResponse.ResponseType.FAILURE, "Bank does not exist!");
         }
         bankAccounts.put(bankName, bankAccounts.get(bankName) + amount);
+        try {
+            banks.save(banksFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return new EconomyResponse(amount, bankAccounts.get(bankName), EconomyResponse.ResponseType.SUCCESS, null);
     }
 
@@ -166,7 +176,14 @@ public class CircuitEconomy implements Economy {
         if (balance < amount) {
             return new EconomyResponse(0, balance, EconomyResponse.ResponseType.FAILURE, "Not enough funds!");
         }
+
+
         bankAccounts.put(bankName, balance - amount);
+        try {
+            banks.save(banksFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return new EconomyResponse(amount, bankAccounts.get(bankName), EconomyResponse.ResponseType.SUCCESS, null);
     }
 
@@ -257,7 +274,7 @@ public class CircuitEconomy implements Economy {
 
     @Override
     public String format(double v) {
-        return String.format("$%.2f", v);
+        return formatNumber((int) v);
     }
 
     @Override

@@ -1,23 +1,25 @@
 package cool.circuit.circuitAddons.menusystem.menus;
 
-
-import cool.circuit.circuitAddons.menusystem.MenuUtility;
-import cool.circuit.circuitAddons.menusystem.menu;
+import cool.circuit.circuitAPI.exceptions.CircuitAPINotSetup;
+import cool.circuit.circuitAPI.menusystem.Menu;
+import cool.circuit.circuitAPI.menusystem.MenuUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.entity.Panda;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.List;
 
 import static cool.circuit.circuitAddons.CircuitAddons.borderPane;
 import static cool.circuit.circuitAddons.CircuitAddons.pane;
+import static cool.circuit.circuitAPI.utils.makeItemUtil.makeItem;
 
-public class manage extends menu {
+public class manage extends Menu {
 
     public Player target;
 
@@ -33,77 +35,82 @@ public class manage extends menu {
 
     @Override
     protected int getSlots() {
-        return 9*3;
+        return 9 * 3;
     }
 
     @Override
     protected void setMenuItems() {
+        addMenuBorder(borderPane, pane);
 
-        addMenuBorder(borderPane);
+        ItemStack pandaStack = makeItem(
+                Material.PANDA_SPAWN_EGG,
+                ChatColor.WHITE + "Summon a mob at the player",
+                List.of(ChatColor.GRAY + "Opens a menu to select which mob to summon at the player!"),
+                new HashMap<>(),
+                false
+        );
 
-        for (int i = 0; i < 9 * 3; i++) {
-            boolean isBorder = false;
+        inv.setItem(14, pandaStack);
 
-            for (int slot : patternSlots) {
-                if (i == slot) {
-                    isBorder = true;
-                    break; // Stop checking if it's already identified as a border
-                }
-            }
+        ItemStack playerHeadStack = makeItem(
+                Material.PLAYER_HEAD,
+                target.getName(),
+                List.of(),
+                new HashMap<>(),
+                false
+        );
 
-            if (!isBorder) {
-                inv.setItem(i, pane);
-            }
-        }
+        inv.setItem(0, playerHeadStack);
 
-        ItemStack pandaStack = new ItemStack(Material.PANDA_SPAWN_EGG);
-        ItemMeta pandaMeta = pandaStack.getItemMeta();
-        pandaMeta.setDisplayName(ChatColor.WHITE + "Summon a mob at the player");
-        pandaMeta.setLore(List.of(ChatColor.GRAY + "Opens a menu to select which mob to summon at the player!"));
-        pandaStack.setItemMeta(pandaMeta);
+        ItemStack closeStack = makeItem(
+                Material.ARROW,
+                ChatColor.RED + "Close",
+                List.of(),
+                new HashMap<>(),
+                false
+        );
 
-        inv.setItem(14,pandaStack);
+        ItemStack banStack = makeItem(
+                Material.BARRIER,
+                ChatColor.DARK_RED + "Ban",
+                List.of(ChatColor.GRAY + "Bans the target's IP Address!"),
+                new HashMap<>(),
+                false
+        );
 
-        ItemStack playerHeadStack =  new ItemStack(Material.PLAYER_HEAD);
-        ItemMeta playerHeadMeta = playerHeadStack.getItemMeta();
-        playerHeadMeta.setDisplayName(target.getName());
-        playerHeadStack.setItemMeta(playerHeadMeta);
+        ItemStack kickStack = makeItem(
+                Material.REDSTONE_BLOCK,
+                ChatColor.RED + "Kick",
+                List.of(ChatColor.GRAY + "Kicks the target!"),
+                new HashMap<>(),
+                false
+        );
 
-        inv.setItem(0,playerHeadStack);
+        inv.setItem(22, closeStack);
+        inv.setItem(12, banStack);
+        inv.setItem(4, kickStack);
+    }
 
-        menuUtility.setTarget(target);
+    @Override
+    public void handleMenu(InventoryClickEvent inventoryClickEvent) throws CircuitAPINotSetup {
 
-        ItemStack closeStack =  new ItemStack(Material.ARROW);
-        ItemMeta closeMeta = closeStack.getItemMeta();
-        closeMeta.setDisplayName(ChatColor.RED + "Close");
-        closeStack.setItemMeta(closeMeta);
+    }
 
-        inv.setItem(22,closeStack);
-
-        ItemStack banStack =  new ItemStack(Material.BARRIER);
-        ItemMeta banMeta = banStack.getItemMeta();
-        banMeta.setDisplayName(ChatColor.DARK_RED + "Ban");
-        banMeta.setLore(List.of(ChatColor.GRAY + "Bans the targets IP Address!"));
-        banStack.setItemMeta(banMeta);
-
-        ItemStack kickStack =  new ItemStack(Material.REDSTONE_BLOCK);
-        ItemMeta kickMeta = kickStack.getItemMeta();
-        kickMeta.setDisplayName(ChatColor.RED + "Kick");
-        kickMeta.setLore(List.of(ChatColor.GRAY + "Kicks the target!"));
-        kickStack.setItemMeta(kickMeta);
-
-        inv.setItem(22,closeStack);
-        inv.setItem(12,banStack);
-        inv.setItem(4,kickStack);
-
-        menuUtility.setTarget(target);
+    @Override
+    protected boolean cancelClicks() {
+        return true;
     }
 
     @Override
     public void open() {
-        inv = Bukkit.createInventory(null, getSlots(),getTitle());
+        inv = Bukkit.createInventory(null, getSlots(), getTitle());
 
         setMenuItems();
         menuUtility.getPlayer().openInventory(inv);
+    }
+
+    @Override
+    public @NotNull Inventory getInventory() {
+        return inv;
     }
 }

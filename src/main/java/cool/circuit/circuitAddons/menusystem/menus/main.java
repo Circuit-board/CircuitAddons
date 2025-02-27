@@ -1,68 +1,117 @@
 package cool.circuit.circuitAddons.menusystem.menus;
 
-import cool.circuit.circuitAddons.menusystem.MenuUtility;
-import cool.circuit.circuitAddons.menusystem.menu;
+import cool.circuit.circuitAPI.exceptions.CircuitAPINotSetup;
+import cool.circuit.circuitAPI.menusystem.Menu;
+import cool.circuit.circuitAPI.menusystem.MenuUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.List;
 
+import static cool.circuit.circuitAPI.utils.makeItemUtil.makeItem;
 import static cool.circuit.circuitAddons.CircuitAddons.*;
 
-public class main extends menu {
+public class main extends Menu {
     public main(MenuUtility menuUtility) {
         super(menuUtility);
     }
 
     @Override
     protected void setMenuItems() {
-        addMenuBorder(borderPane);
+        addMenuBorder(borderPane, pane);
 
-        for (int i = 0; i < 9 * 3; i++) {
-            boolean isBorder = false;
+        ItemStack manageStack = makeItem(
+                Material.PLAYER_HEAD,
+                ChatColor.GREEN + "Manage Player",
+                List.of(ChatColor.GRAY + "To manage a player type: \"/manage [player name]\""),
+                new HashMap<>(),
+                false
+        );
 
-            for (int slot : patternSlots) {
-                if (i == slot) {
-                    isBorder = true;
-                    break; // Stop checking if it's already identified as a border
-                }
-            }
+        ItemStack allTitleStack = makeItem(
+                Material.YELLOW_DYE,
+                ChatColor.YELLOW + "Send title to all players",
+                List.of(
+                        ChatColor.GRAY + "To send a title and/or subtitle to all players type: ",
+                        ChatColor.GRAY + "\"/alltitle [subtitle|title|actionbar] [title|subtitle|actionbar], [subtitle], [actionbar]\""
+                ),
+                new HashMap<>(),
+                false
+        );
 
-            if (!isBorder) {
-                inv.setItem(i, pane);
-            }
-        }
+        ItemStack closeStack = makeItem(
+                Material.ARROW,
+                ChatColor.RED + "Close",
+                List.of(),
+                new HashMap<>(),
+                false
+        );
 
-        ItemStack manageStack = new ItemStack(Material.PLAYER_HEAD);
-        ItemMeta manageMeta = manageStack.getItemMeta();
-        manageMeta.setDisplayName(ChatColor.GREEN + "Manage Player");
-        manageMeta.setLore(List.of(ChatColor.GRAY + "To manage a player type: \"/manage [player name]\""));
-        manageStack.setItemMeta(manageMeta);
+        ItemStack minecraftStack = makeItem(
+                Material.GRASS_BLOCK,
+                ChatColor.GREEN + "Minecraft inside of minecraft (Buggy)",
+                List.of(ChatColor.GRAY + "Basiclly 2D minecraft inside of minecraft with 10x more bugs"),
+                new HashMap<>(),
+                false
+        );
 
-        ItemStack allTitleStack = new ItemStack(Material.YELLOW_DYE);
-        ItemMeta allTitleMeta = allTitleStack.getItemMeta();
-        allTitleMeta.setDisplayName(ChatColor.YELLOW + "Send title to all players");
-        allTitleMeta.setLore(List.of(ChatColor.GRAY + "To send a title and/or subtitle to all players type: ",ChatColor.GRAY + "\"/alltitle [subtitle|title|both] [title] [subtitle]\""));
-        allTitleStack.setItemMeta(allTitleMeta);
+        ItemStack paintDryingStack = makeItem(
+                Material.WHITE_STAINED_GLASS,
+                ChatColor.WHITE + "Paint drying simulator",
+                List.of(ChatColor.GRAY + "Literally..."),
+                new HashMap<>(),
+                false
+        );
 
-        inv.setItem(12,allTitleStack);
-        inv.setItem(14,manageStack);
+        ItemStack economyStack = makeItem(
+                Material.EMERALD,
+                ChatColor.GREEN + "Economy",
+                List.of(
+                        ChatColor.GRAY + "/eco set to set a persons balance",
+                        ChatColor.GRAY + "/eco add to add to a persons balance",
+                        ChatColor.GRAY + "/shop browse to view all items that have been set in the config",
+                        ChatColor.GRAY + "/shop buy|sell to sell/buy things"
+                ),
+                new HashMap<>(),
+                false
+        );
 
-        ItemStack closeStack =  new ItemStack(Material.ARROW);
-        ItemMeta closeMeta = closeStack.getItemMeta();
-        closeMeta.setDisplayName(ChatColor.RED + "Close");
-        closeStack.setItemMeta(closeMeta);
+        ItemStack slotGuesserStack = makeItem(
+                Material.RED_STAINED_GLASS_PANE,
+                ChatColor.RED + "Slot Guesser",
+                List.of(ChatColor.GRAY + "Click a slot to guess!"),
+                new HashMap<>(),
+                false
+        );
 
-        inv.setItem(22,closeStack);
+        inv.setItem(12, allTitleStack);
+        inv.setItem(14, manageStack);
+        inv.setItem(22, closeStack);
+        inv.setItem(13, minecraftStack);
+        inv.setItem(4,  paintDryingStack);
+        inv.setItem(3,  economyStack);
+        inv.setItem(5,  slotGuesserStack);
     }
 
+    @Override
+    public void handleMenu(InventoryClickEvent inventoryClickEvent) throws CircuitAPINotSetup {
+        inventoryClickEvent.setCancelled(true);
+    }
+
+    @Override
+    protected boolean cancelClicks() {
+        return true;
+    }
 
     @Override
     protected int getSlots() {
-        return 9*3;
+        return 9 * 3;
     }
 
     @Override
@@ -72,8 +121,13 @@ public class main extends menu {
 
     @Override
     public void open() {
-        inv = Bukkit.createInventory(null,getSlots(),getTitle());
+        inv = Bukkit.createInventory(null, getSlots(), getTitle());
         setMenuItems();
         menuUtility.getPlayer().openInventory(inv);
+    }
+
+    @Override
+    public @NotNull Inventory getInventory() {
+        return inv;
     }
 }

@@ -28,14 +28,23 @@ public class shop implements TabExecutor {
             return false;
         }
 
-        if(args.length < 2) {
+        Player player = (Player) sender;
+
+        if(args[0].equalsIgnoreCase("browse")) {
+            cool.circuit.circuitAddons.menusystem.menus.shop menu = new cool.circuit.circuitAddons.menusystem.menus.shop(getMenuUtility(player));
+            menu.open();
+            return true;
+        }
+
+        if(!(args.length >= 1)) return false;
+
+        if(args.length < 2 && !args[0].equalsIgnoreCase("shop")) {
             ((Player) sender).sendMessage("Usage: /shop <buy|sell> <item_name_in_full_caps>");
             return false;
+        } else if(args[0].equalsIgnoreCase("shop") && args.length == 1) {
         }
 
         joinSync();
-
-        Player player = (Player) sender;
 
         // Check if the item exists in the configuration
         if (!items.contains("items." + args[1])) {
@@ -100,7 +109,7 @@ public class shop implements TabExecutor {
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (args.length == 1) {
-            return List.of("buy", "sell");
+            return List.of("buy", "sell","browse");
         } else if (args.length == 2) {
             if (items.contains("items")) {  // Ensure "items" exists
                 if (items.getConfigurationSection("items") != null) {  // Prevent null reference

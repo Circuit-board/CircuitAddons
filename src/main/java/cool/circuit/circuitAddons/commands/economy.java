@@ -1,5 +1,6 @@
 package cool.circuit.circuitAddons.commands;
 
+import cool.circuit.circuitAddons.CircuitAddons;
 import cool.circuit.circuitAddons.vault.CircuitBanks;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -15,6 +16,7 @@ import java.util.List;
 
 import static cool.circuit.circuitAddons.CircuitAddons.PREFIX;
 import static cool.circuit.circuitAddons.CircuitAddons.getEconomy;
+import static cool.circuit.circuitAddons.utils.NumberFormatter.formatNumber;
 import static cool.circuit.circuitAddons.vault.CircuitBanks.*;
 
 public class economy implements TabExecutor {
@@ -56,13 +58,13 @@ public class economy implements TabExecutor {
 
             switch (action) {
                 case "set":
-                    target.getPlayer().sendMessage(PREFIX + "Set " + target.getName() + "'s Balance to " + args[2]);
+                    target.getPlayer().sendMessage(PREFIX + "Set " + target.getName() + "'s Balance to " + formatNumber((int) amount));
                     setBalance(bankName, (int) amount);
                     break;
 
                 case "add":
                     addToBalance(bankName, (int) amount);
-                    target.getPlayer().sendMessage(PREFIX + "Added " + args[2] + " To bank: " + bankName + "!");
+                    target.getPlayer().sendMessage(PREFIX + "Added " + formatNumber((int) amount) + " To bank: " + bankName + "!");
                     break;
 
 

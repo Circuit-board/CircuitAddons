@@ -1,8 +1,7 @@
 package cool.circuit.circuitAddons.commands;
 
+import cool.circuit.circuitAPI.menusystem.MenuUtility;
 import cool.circuit.circuitAddons.CircuitAddons;
-import cool.circuit.circuitAddons.menusystem.MenuUtility;
-import cool.circuit.circuitAddons.menusystem.menu;
 import cool.circuit.circuitAddons.menusystem.menus.main;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -29,7 +28,7 @@ public class manage implements CommandExecutor, Listener {
             return false;
         }
 
-        if (CircuitAddons.getSettingsFile().getBoolean("guis.manage.enabled")) {
+        if (CircuitAddons.getSettings().getBoolean("guis.manage.enabled")) {
 
             Player player = (Player) sender;
 
@@ -42,9 +41,26 @@ public class manage implements CommandExecutor, Listener {
                 sender.sendMessage(ChatColor.RED + "Player does not exist!");
                 return false;
             }
-            Player target = Bukkit.getPlayer(args[0]);
-            cool.circuit.circuitAddons.menusystem.menus.manage menu = new cool.circuit.circuitAddons.menusystem.menus.manage(getMenuUtility(player), target);
-            menu.open();
+            Player target = Bukkit.getPlayerExact(args[0]); // Case-sensitive check
+
+            getMenuUtility(player).setTarget(target);
+
+            if (target == null) {
+                player.sendMessage(ChatColor.RED + "Player not found! (Are they online?)");
+                return false;
+            }
+
+            System.out.println("Found player: " + target.getName());
+
+            MenuUtility menuUtility = getMenuUtility(player);
+            if (menuUtility == null) {
+                menuUtility = new MenuUtility(player);
+            }
+
+            cool.circuit.circuitAddons.menusystem.menus.manage menu =
+                    new cool.circuit.circuitAddons.menusystem.menus.manage(menuUtility, target);
+            Bukkit.getScheduler().runTask(CircuitAddons.getInstance(), () -> menu.open());
+
 
             return true;
         } else {

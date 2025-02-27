@@ -1,14 +1,24 @@
 package cool.circuit.circuitAddons;
 
 import cool.circuit.circuitAddons.commands.*;
+import cool.circuit.circuitAddons.listeners.ChatListener;
 import cool.circuit.circuitAddons.listeners.InventoryClickListener;
-import cool.circuit.circuitAddons.menusystem.MenuUtility;
-import cool.circuit.circuitAddons.vault.CircuitBanks;
+import cool.circuit.circuitAddons.listeners.InventoryOpenListener;
+import cool.circuit.circuitAddons.listeners.PlayerDeathListener;
+import cool.circuit.circuitAddons.papi.CircuitExpansion;
 import cool.circuit.circuitAddons.vault.CircuitEconomy;
-import io.papermc.paper.datacomponent.item.Fireworks;
+import me.clip.placeholderapi.PlaceholderAPI;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
+import net.luckperms.api.model.user.User;
+import net.luckperms.api.node.Node;
+import net.luckperms.api.node.types.MetaNode;
+import net.luckperms.api.query.QueryOptions;
 import org.bukkit.*;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
@@ -16,7 +26,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -25,29 +37,57 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
-import net.milkbowl.vault.economy.EconomyResponse;
 import net.milkbowl.vault.permission.Permission;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import static cool.circuit.circuitAPI.menusystem.MenuManager.setup;
+import static cool.circuit.circuitAPI.utils.makeItemUtil.makeItem;
+/*import static cool.circuit.circuitAddons.games.circuitclicker.CircuitClicker.getLeaderboard;
+import static cool.circuit.circuitAddons.games.circuitclicker.CircuitClicker.scores*/
 import static cool.circuit.circuitAddons.vault.CircuitBanks.*;
-import static cool.circuit.circuitAddons.vault.CircuitEconomy.playerBalances;
+
+import cool.circuit.circuitAPI.menusystem.MenuUtility;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scoreboard.*;
 
 public final class CircuitAddons extends JavaPlugin implements Listener {
 
-    ///////////////
+     ///////////////
     // Variables //
-    /// ////////////
+   ///////////////
 
     public static CircuitAddons instance;
 
-    public static ItemStack pane = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+    private static Scoreboard currentScoreboard;
 
-    public static ItemStack borderPane = new ItemStack(Material.YELLOW_STAINED_GLASS_PANE);
+    public static ItemStack pane = makeItem(
+            Material.BLACK_STAINED_GLASS_PANE,
+            " ",
+            List.of(),
+            new HashMap<>(),
+            false
+    );
+
+    public static ItemStack borderPane = makeItem(
+            Material.YELLOW_STAINED_GLASS_PANE,
+            " ",
+            List.of(),
+            new HashMap<>(),
+            false
+    );
 
     private static final HashMap<Player, MenuUtility> MenuUtilityMap = new HashMap<>();
+    public static final HashMap<UUID, Boolean> MuteMap = new HashMap<>();
+    public static final List<String> BlackListedWords = new ArrayList<>();
+
+    public static ItemStack itemToEnchant = null;
+    public static Enchantment currentEnchant = null;
+    public static int currentEnchantLevel = 0;
 
     private static Economy econ;
     private static Chat chat;
@@ -69,6 +109,23 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
 
     public static FileConfiguration items;
     public static File itemsFile;
+
+    public static FileConfiguration mutes;
+    public static File mutesFile;
+
+    public static FileConfiguration blacklist;
+    public static File blacklistFile;
+
+    public static FileConfiguration scoreList;
+    public static File scoreListFile;
+
+    public static FileConfiguration minecraftGame;
+    public static File minecraftGameFile;
+
+    public static FileConfiguration nicksList;
+    public static File nicksListFile;
+
+    private LuckPerms luckPerms;
 
     //////////////////////
     // Basic Functions //
@@ -125,12 +182,69 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
     public void onEnable() {
         instance = this;
 
+        setup(Bukkit.getServer(),this);
+
         // Ensure data folder exists
         if (!getDataFolder().exists()) {
             getDataFolder().mkdirs();
         }
 
-        // ✅ Initialize settings file BEFORE loading
+        luckPerms = LuckPermsProvider.get();
+
+        // ✅ Initialize mutes.yml BEFORE using it
+        mutesFile = new File(getDataFolder(), "mutes.yml");
+        if (!mutesFile.exists()) {
+            try {
+                mutesFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().warning("Failed to create mutes.yml!");
+            }
+        }
+
+        mutes = YamlConfiguration.loadConfiguration(mutesFile); // ✅ Load mutes file
+
+        scoreListFile = new File(getDataFolder(), "scoreList.yml");
+        if (!scoreListFile.exists()) {
+            try {
+                scoreListFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().warning("Failed to create scoreList.yml!");
+            }
+        }
+
+        scoreList = YamlConfiguration.loadConfiguration(scoreListFile);
+
+        if (!mutes.contains("mutes")) { // ⚠️ Ensure "mutes" section exists
+            mutes.createSection("mutes");
+            try {
+                mutes.save(mutesFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        minecraftGameFile = new File(getDataFolder(), "minecraftGame.yml");
+        if (!minecraftGameFile.exists()) {
+            try {
+                minecraftGameFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().warning("Failed to create scoreList.yml!");
+            }
+        }
+        minecraftGame = YamlConfiguration.loadConfiguration(minecraftGameFile);
+
+        nicksListFile = new File(getDataFolder(), "nicks.yml");
+        if (!nicksListFile.exists()) {
+            try {
+                nicksListFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().warning("Failed to create nicks.yml!");
+            }
+        }
+
+        nicksList = YamlConfiguration.loadConfiguration(nicksListFile);
+
+        // ✅ Initialize settings.yml BEFORE loading
         settingsFile = new File(getDataFolder(), "settings.yml");
         if (!settingsFile.exists()) {
             try {
@@ -140,7 +254,6 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
             }
         }
 
-        // ✅ Load settings AFTER file initialization
         loadSettings();
         saveSettings();
 
@@ -162,6 +275,7 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
 
         // ✅ Initialize items.yml BEFORE using it
         itemsFile = new File(getDataFolder(), "items.yml");
+        blacklistFile = new File(getDataFolder(), "blacklist.yml");
         if (!itemsFile.exists()) {
             try {
                 itemsFile.createNewFile();
@@ -170,7 +284,10 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
             }
         }
 
-        if (!items.contains("items")) {  // ⚠️ Fixed condition (was `if(items.contains("items"))`)
+        items = YamlConfiguration.loadConfiguration(itemsFile); // ✅ Load items file
+        blacklist = YamlConfiguration.loadConfiguration(blacklistFile);
+
+        if (!items.contains("items")) {
             items.createSection("items");
             try {
                 items.save(itemsFile);
@@ -179,10 +296,36 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
             }
         }
 
+        /*for(Player i : Bukkit.getOnlinePlayers()) {
+            scores.put(i.getUniqueId(), scoreList.getInt("scores." + i.getUniqueId() + ".score"));
+        }*/
+
         // ✅ Initialize banks.yml BEFORE using it
         loadBanks(); // Ensures banksFile is not null
 
         joinSync();
+
+        /*if (scoreList.contains("highscores")) {
+            ConfigurationSection section = scoreList.getConfigurationSection("highscores");
+            if (section != null) {
+                for (String key : section.getKeys(false)) {
+                    try {
+                        UUID playerId = UUID.fromString(key);
+                        int highScore = section.getInt(key);
+                        CircuitClicker.highScores.put(playerId, highScore);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Invalid UUID in highscores: " + key);
+                    }
+                }
+            }
+        }*/
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                updateTablist();
+            }
+        }.runTaskTimer(this, 0L, 100L);
 
         // Register commands
         getCommand("circuitaddons").setExecutor(new circuitaddons());
@@ -196,24 +339,105 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         getCommand("balcheck").setExecutor(new BalCheck());
         getCommand("banks").setExecutor(new banks());
         getCommand("shop").setExecutor(new shop());
+        getCommand("mute").setExecutor(new mute());
+        getCommand("unmute").setExecutor(new unmute());
+        getCommand("blacklist").setExecutor(new blacklist());
+        getCommand("biome").setExecutor(new biome());
+        getCommand("gma").setExecutor(new gma());
+        getCommand("gmc").setExecutor(new gmc());
+        getCommand("gms").setExecutor(new gms());
+        getCommand("gmsp").setExecutor(new gmsp());
+        getCommand("slotguesser").setExecutor(new slotguesser());
+        getCommand("paintdrying").setExecutor(new paintdrying());
+        getCommand("minecraft").setExecutor(new minecraft());
+        getCommand("createentity").setExecutor(new createentity());
+        getCommand("enchanting").setExecutor(new cool.circuit.circuitAddons.commands.enchanting());
+        getCommand("heal").setExecutor(new heal());
+        getCommand("nick").setExecutor(new nick());
+        getCommand("unnick").setExecutor(new unnick());
+        getCommand("npc").setExecutor(new npc());
 
+        startScoreboardUpdater();
+
+        if (nicksList.getConfigurationSection("nicks") != null) {
+            for (String i : nicksList.getConfigurationSection("nicks").getKeys(false)) {
+                if (nicksList.getBoolean("nicks." + i + ".state", false)) {
+                    Player player = Bukkit.getPlayer(i);
+                    if (player != null) { // Ensure player is online
+                        String nickname = nicksList.getString("nicks." + i + ".text", player.getName());
+                        player.setDisplayName(nickname);
+                        player.setPlayerListName(nickname);
+                        LuckPerms luckPerms = LuckPermsProvider.get();
+                        User user = luckPerms.getUserManager().getUser(player.getUniqueId());
+                        if (user != null) {
+                            MetaNode node = MetaNode.builder("nickname", nickname).build();
+                            user.data().add(node);
+                            luckPerms.getUserManager().saveUser(user);
+
+                            // Ensure LuckPerms applies changes immediately
+                            luckPerms.getUserManager().loadUser(player.getUniqueId()).thenAccept(updatedUser -> {
+                                Bukkit.getScheduler().runTask(this, () -> {
+                                    player.setPlayerListName(nickname);
+                                });
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+
+        Bukkit.getPluginManager().registerEvents(new InventoryOpenListener(),this);
         Bukkit.getPluginManager().registerEvents(new InventoryClickListener(), this);
+        Bukkit.getPluginManager().registerEvents(new ChatListener(), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerDeathListener(), this);
         Bukkit.getPluginManager().registerEvents(this, this);
 
-        PREFIX = ChatColor.translateAlternateColorCodes('&', settings.getString("settings.prefix", "&0[&6CircuitAddons&0] &6"));
 
+        if(settings.getString("settings.prefix") == null) {
+            return;
+        }
+        if (settings.getString("settings.prefix") == null) {
+            PREFIX = "";
+        } else {
+            PREFIX = ChatColor.translateAlternateColorCodes('&',
+                    settings.getString("settings.prefix", "&6[CircuitAddons] &e"));
+        }
         for (OfflinePlayer player : Bukkit.getOperators()) {
             if (player.isOnline()) {
                 player.getPlayer().sendMessage(PREFIX + "Enabled!");
             }
         }
+
+        ConfigurationSection muteSection = mutes.getConfigurationSection("mutes");
+        if (muteSection != null) {
+            for (String uuid : muteSection.getKeys(false)) {
+                MuteMap.put(UUID.fromString(uuid), true);
+            }
+        }
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new CircuitExpansion().register();
+        }
+        for (String word : blacklist.getStringList("blacklist")) { // Correct way to fetch list
+            if (!BlackListedWords.contains(word)) {
+                BlackListedWords.add(word);
+            }
+        }
+        for(Player i : Bukkit.getOnlinePlayers())
+            createScoreBoard(i);
     }
+
 
 
     @Override
     public void onDisable() {
-        PREFIX = ChatColor.translateAlternateColorCodes('&', settings.getString("settings.prefix", "&0[&6CircuitAddons&0] &6"));
-        // Plugin shutdown logic
+        if (settings.getString("settings.prefix") == null) {
+            PREFIX = "";
+        } else {
+            PREFIX = ChatColor.translateAlternateColorCodes('&',
+                    settings.getString("settings.prefix", "&6[CircuitAddons] &e"));
+        }
+
         for (OfflinePlayer player : Bukkit.getOperators()) {
             if (player.isOnline()) { // Ensure the player is online before casting
                 Player onlinePlayer = player.getPlayer();
@@ -222,15 +446,19 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         }
         saveSettings();
         sync();
+        try {
+            scoreList.save(scoreListFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     ////////////////
     //Join Event///
-
     /// ////////////
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) throws IOException {
+    public void onPlayerJoin(PlayerJoinEvent event) {
 
         itemsFile = new File(Bukkit.getPluginManager().getPlugin("CircuitAddons").getDataFolder(), "items.yml");
 
@@ -244,9 +472,10 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
 
         items = YamlConfiguration.loadConfiguration(itemsFile);
 
-        if(items.contains("items")) {
+        if (!items.contains("items")) {
             items.createSection("items");
         }
+
 
         joinSync();
 
@@ -262,9 +491,9 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
                 String fireworkTypeStr = settings.getString("events.playerJoin.fireworks.pattern", "BALL"); // Default to BALL if missing
                 try {
                     FireworkEffect.Type fireworkType = FireworkEffect.Type.valueOf(fireworkTypeStr.toUpperCase());
-                    spawnFirework(location, fireworkType, color, 1);
+                    spawnFirework(location, fireworkType, color, 10);
                 } catch (IllegalArgumentException e) {
-                    Bukkit.getLogger().warning( "Invalid firework pattern in settings.yml: " + fireworkTypeStr);
+                    Bukkit.getLogger().warning("Invalid firework pattern in settings.yml: " + fireworkTypeStr);
                 }
             }
         } else {
@@ -275,32 +504,33 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         boolean joinTitleEnabled = settings.getBoolean("events.playerJoin.title.enabled");
 
         if (joinTitleEnabled) {
-            String title = ChatColor.translateAlternateColorCodes('&',
-                    settings.getString("events.playerJoin.title.title")
-                            .replace("{server_name}", settings.getString("settings.server_name", "the server")));
+            String titleRaw = ChatColor.translateAlternateColorCodes('&',settings.getString("events.playerJoin.title.title", "&6Welcome To {server_name}!"));
+            String subtitleRaw = ChatColor.translateAlternateColorCodes('&',settings.getString("events.playerJoin.title.subtitle", "&bHave fun!"));
 
-            String subtitle = ChatColor.translateAlternateColorCodes('&',
-                    settings.getString("events.playerJoin.title.subtitle")
-                            .replace("{server_name}", settings.getString("settings.server_name", "the server")));
+            titleRaw = titleRaw.replace("{server_name}", settings.getString("settings.server_name", "the server"));
+            subtitleRaw = subtitleRaw.replace("{server_name}", settings.getString("settings.server_name", "the server"));
 
-            player.sendTitle(title, subtitle);
+
+            player.sendTitle(titleRaw, subtitleRaw, 10, 20, 10);
         }
+
         if (joinMessageEnabled) {
             List<String> players = settings.getStringList("players");
-            String message;
+            String messageRaw;
 
             if (players.contains(uuid)) {
-                message = settings.getString("messages.joinMessage", "Welcome back {player}!")
+                messageRaw = settings.getString("messages.joinMessage", "Welcome back {player}!")
                         .replace("{player}", player.getName())
                         .replace("{server_name}", settings.getString("settings.server_name", "the server"));
             } else {
                 players.add(uuid);
                 settings.set("players", players);
-                getInstance().saveSettings(); // Use saveSettings() instead of saveConfig()
+                getInstance().saveSettings();
 
-                message = settings.getString("messages.firstJoinMessage", "Welcome to {server_name}, {player}!")
+                messageRaw = settings.getString("messages.firstJoinMessage", "Welcome to {server_name}, {player}!")
                         .replace("{player}", player.getName())
                         .replace("{server_name}", settings.getString("settings.server_name", "Your server"));
+
                 List<String> items = settings.getStringList("rewards.firstJoin.items");
                 for (String item : items) {
                     String[] parts = item.split(":");
@@ -316,11 +546,10 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
                 }
             }
 
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', PREFIX + message));
+            player.sendMessage(messageRaw);
         }
-
-
     }
+
 
     public void saveSettings() {
         try {
@@ -365,6 +594,10 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         homes = loadOrCreateFile("homes.yml");
         banks = loadOrCreateFile("banks.yml");
         items = loadOrCreateFile("items.yml");
+        mutes = loadOrCreateFile("mutes.yml");
+        blacklist = loadOrCreateFile("blacklist.yml");
+        scoreList = loadOrCreateFile("scoreList.yml");
+        nicksList = loadOrCreateFile("nicks.yml");
     }
 
     private String getDefaultConfigContents() {
@@ -373,11 +606,20 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
                 
                                                     settings:
                                                       joinMessage: true
-                                                      prefix: '&0[&6CircuitAddons&0] &6' #https://easycodetools.com/tool/Minecraft-Text-Generator
+                                                      prefix: '&0[&6CircuitAddons&0] &6'
                                                       server_name: 'Your server'
+                                                      scoreboard:
+                                                        title: '&eCIRCUIT ADDONS'
+                                                        lines: []
+                                                      tablist:
+                                                        header: '&eCircuit Addons'
+                                                        footer: '&eYou are using Circuit Addons!'
+                                                      motd:
+                                                        lines: []
                                                     messages:
                                                       joinMessage: 'Welcome back to {server_name}, {player}!'
                                                       firstJoinMessage: 'Welcome to {server_name}, {player}!'
+                                                      deathMessage: '{player} got internally rekt!'
                                                     guis:
                                                       manage:
                                                         enabled: true
@@ -400,7 +642,8 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
                                                         title:
                                                           enabled: true
                                                           title: "&6Welcome To {server_name}!"
-                                                          subtitle: "&bHave fun!"
+                                                          subtitle: "&9Have fun!"
+                                                        
                 
                                                     # Don't modify unless you know what you are doing!
                 
@@ -429,11 +672,21 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
     public static void reload() {
         instance.loadSettings(); // Reload settings.yml
         instance.saveSettings();
-        CircuitBanks.loadSettings();
-        sync();
+
+
+
+        // Correctly refresh the scoreboard
+
+        // Update PREFIX
         PREFIX = ChatColor.translateAlternateColorCodes('&',
-                settings.getString("settings.prefix", "&0[&6CircuitAddons&0] &6"));
+                settings.getString("settings.prefix", "&e&6[CircuitAddons] &6"));
+
+        // **FORCE REASSIGN SCOREBOARD TO ALL PLAYERS**
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.setScoreboard(instance.currentScoreboard);
+        }
     }
+
 
     public static FileConfiguration getSettingsFile() {
         return settings;
@@ -470,19 +723,28 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
+
         if (chat == null || perms == null) return;
 
         String prefix = chat.getPlayerPrefix(event.getPlayer());
         String suffix = chat.getPlayerSuffix(event.getPlayer());
 
-        // Add colors if needed
+        if (prefix == null) prefix = "";
+        if (suffix == null) suffix = "";
+
+        // Convert legacy color codes (& -> §)
         prefix = ChatColor.translateAlternateColorCodes('&', prefix);
         suffix = ChatColor.translateAlternateColorCodes('&', suffix);
 
-        // Set the format: [Prefix] Name: Message Suffix
-        String formattedMessage = prefix + event.getPlayer().getName() + " " + suffix + ": " + ChatColor.translateAlternateColorCodes('&', event.getMessage());
-        event.setFormat(formattedMessage);
+        // Convert & codes in the message as well
+        String legacyMessage = ChatColor.translateAlternateColorCodes('&', event.getMessage());
+
+        // Set formatted chat message
+        event.setFormat(prefix + "%s" + suffix + ": " + legacyMessage);
     }
+
+
+
     public static void loadBanks() {
         File dataFolder = Bukkit.getPluginManager().getPlugin("CircuitAddons").getDataFolder();
 
@@ -528,5 +790,93 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         }
     }
 
+    public static FileConfiguration getSettings() {
+        return settings;
+    }
 
+    public static ItemStack getYouWinDiamond() {
+        ItemStack item = makeItem(Material.DIAMOND,ChatColor.GOLD + "" + ChatColor.BOLD + "Win Diamond",List.of(ChatColor.GRAY + "Obtained by winning slot guesser"),new HashMap<>(), false);
+        return item;
+    }
+    private void registerRecipies() {}
+    private Objective objective;
+
+    private String parsePlaceholders(Player player, String input) {
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            String parsed = PlaceholderAPI.setPlaceholders(player, input);
+            return parsed;
+        }
+        return input;
+    }
+
+    private void startScoreboardUpdater() {
+        new BukkitRunnable() {
+
+            @Override
+            public void run() {
+                for(Player player : Bukkit.getOnlinePlayers()) {
+                    createScoreBoard(player);
+                }
+            }
+        }.runTaskTimer(this,0L,40L);
+    }
+
+    private void createScoreBoard(Player player) {
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        if (manager == null) return;
+
+        Scoreboard board = manager.getNewScoreboard();
+        objective = board.registerNewObjective("circuitaddons", "dummy");
+        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        objective.setDisplayName(ChatColor.translateAlternateColorCodes('&', (settings.getString("settings.scoreboard.title", "<gold>CIRCUIT ADDONS"))));
+
+        List<String> lines = settings.getStringList("settings.scoreboard.lines");
+        int currentSlot = lines.size();
+
+        for (String line : lines) {
+            String formattedLine = ChatColor.translateAlternateColorCodes('&', parsePlaceholders(player,line));
+            objective.getScore(formattedLine).setScore(currentSlot);
+            currentSlot--;
+        }
+
+        player.setScoreboard(board);
+
+        instance.currentScoreboard = board;
+    }
+
+    public String getLuckPermsPrefix(Player player) {
+        User user = luckPerms.getUserManager().getUser(player.getUniqueId());
+        if (user == null) return "";
+
+        return ChatColor.translateAlternateColorCodes('&', user.getCachedData().getMetaData(QueryOptions.defaultContextualOptions()).getPrefix());
+    }
+
+    private void updateTablist() {
+        String header = ChatColor.translateAlternateColorCodes('&', settings.getString("settings.tablist.header", "You are using Circuit Addons!") + "\n");
+        String footer = "\n" + ChatColor.translateAlternateColorCodes('&', settings.getString("settings.tablist.footer", "Online players: " + Bukkit.getOnlinePlayers().size()));
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            String prefix = getLuckPermsPrefix(player);
+            String displayName = player.getName();
+
+            if (nicksList.getBoolean("nicks." + player.getName() + ".state", false)) {
+                displayName = nicksList.getString("nicks." + player.getName() + ".text", player.getName());
+            }
+
+            player.setPlayerListHeaderFooter(header, footer);
+            player.setPlayerListName(prefix + displayName);
+        }
+    }
+
+    @EventHandler
+    public void onServerPing(ServerListPingEvent event) {
+        List<String> lines = settings.getStringList("settings.motd.lines");
+        StringBuilder linesFormatted = new StringBuilder();
+
+        for (String line : lines) {
+            linesFormatted.append(ChatColor.translateAlternateColorCodes('&', line)).append("\n");
+        }
+
+        event.setMotd(linesFormatted.toString().trim()); // Set the MOTD
+    }
 }
