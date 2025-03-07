@@ -1,6 +1,7 @@
 package cool.circuit.circuitAddons.commands;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -20,6 +21,10 @@ public class unmute implements TabExecutor {
         if (args.length != 1) {
             sender.sendMessage("Usage: /unmute <UUID>");
             return true;
+        }
+        if(!sender.hasPermission("circuitaddons.unmute")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
         }
 
         try {

@@ -27,6 +27,11 @@ public class setspawn implements CommandExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.setspawn")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         Location location = player.getLocation();
 
         String path = "spawn.";

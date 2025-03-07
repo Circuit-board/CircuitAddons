@@ -1,19 +1,18 @@
 package cool.circuit.circuitAddons;
 
+import cool.circuit.circuitAPI.menusystem.MenuListener;
+import cool.circuit.circuitAddons.Items.EnderManShortBow;
+import cool.circuit.circuitAddons.Items.FlameSword;
+import cool.circuit.circuitAddons.Items.LightningSword;
+import cool.circuit.circuitAddons.Items.WardenShortBow;
 import cool.circuit.circuitAddons.commands.*;
-import cool.circuit.circuitAddons.listeners.ChatListener;
-import cool.circuit.circuitAddons.listeners.InventoryClickListener;
-import cool.circuit.circuitAddons.listeners.InventoryOpenListener;
-import cool.circuit.circuitAddons.listeners.PlayerDeathListener;
+import cool.circuit.circuitAddons.listeners.*;
+import cool.circuit.circuitAddons.managers.LootboxManager;
 import cool.circuit.circuitAddons.papi.CircuitExpansion;
+import cool.circuit.circuitAddons.vault.CircuitChat;
 import cool.circuit.circuitAddons.vault.CircuitEconomy;
+import cool.circuit.circuitAddons.vault.CircuitPerms;
 import me.clip.placeholderapi.PlaceholderAPI;
-import net.luckperms.api.LuckPerms;
-import net.luckperms.api.LuckPermsProvider;
-import net.luckperms.api.model.user.User;
-import net.luckperms.api.node.Node;
-import net.luckperms.api.node.types.MetaNode;
-import net.luckperms.api.query.QueryOptions;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -48,6 +47,8 @@ import static cool.circuit.circuitAPI.menusystem.MenuManager.setup;
 import static cool.circuit.circuitAPI.utils.makeItemUtil.makeItem;
 /*import static cool.circuit.circuitAddons.games.circuitclicker.CircuitClicker.getLeaderboard;
 import static cool.circuit.circuitAddons.games.circuitclicker.CircuitClicker.scores*/
+import static cool.circuit.circuitAddons.managers.LootboxManager.loadLootboxes;
+import static cool.circuit.circuitAddons.managers.LootboxManager.saveLootboxes;
 import static cool.circuit.circuitAddons.vault.CircuitBanks.*;
 
 import cool.circuit.circuitAPI.menusystem.MenuUtility;
@@ -64,6 +65,7 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
     public static CircuitAddons instance;
 
     private static Scoreboard currentScoreboard;
+    public static CircuitChat circuitChat;
 
     public static ItemStack pane = makeItem(
             Material.BLACK_STAINED_GLASS_PANE,
@@ -90,8 +92,8 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
     public static int currentEnchantLevel = 0;
 
     private static Economy econ;
-    private static Chat chat;
-    private static Permission perms;
+    public static Chat chat;
+    public static Permission perms;
 
     public static String PREFIX;
 
@@ -125,7 +127,11 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
     public static FileConfiguration nicksList;
     public static File nicksListFile;
 
-    private LuckPerms luckPerms;
+    public static FileConfiguration prefixes;
+    public static File prefixesFile;
+
+    public static FileConfiguration lootboxes;
+    public static File lootboxesFile;
 
     //////////////////////
     // Basic Functions //
@@ -162,16 +168,17 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
 
 
     private void setupChat() {
-        RegisteredServiceProvider<Chat> chatProvider = Bukkit.getServicesManager().getRegistration(Chat.class);
-        if (chatProvider != null) {
-            chat = chatProvider.getProvider();
-        }
-
-        RegisteredServiceProvider<Permission> permProvider = Bukkit.getServicesManager().getRegistration(Permission.class);
-        if (permProvider != null) {
-            perms = permProvider.getProvider();
-        }
+        // Register CircuitChat as the chat provider
+        chat = new CircuitChat(perms);
+        Bukkit.getServicesManager().register(Chat.class, chat, this, ServicePriority.Highest);
     }
+
+    private void setupPermissions() {
+        perms = new CircuitPerms();
+        Bukkit.getServicesManager().register(Permission.class, perms, this, ServicePriority.Highest);
+    }
+
+
 
     ///////////////////////////
     // Enable And Disabling //
@@ -189,8 +196,6 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
             getDataFolder().mkdirs();
         }
 
-        luckPerms = LuckPermsProvider.get();
-
         // ✅ Initialize mutes.yml BEFORE using it
         mutesFile = new File(getDataFolder(), "mutes.yml");
         if (!mutesFile.exists()) {
@@ -202,6 +207,16 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         }
 
         mutes = YamlConfiguration.loadConfiguration(mutesFile); // ✅ Load mutes file
+
+        lootboxesFile = new File(getDataFolder(), "lootboxes.yml");
+        if (!lootboxesFile.exists()) {
+            try {
+                lootboxesFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().warning("Failed to create lootboxes.yml!");
+            }
+        }
+        lootboxes = YamlConfiguration.loadConfiguration(lootboxesFile);
 
         scoreListFile = new File(getDataFolder(), "scoreList.yml");
         if (!scoreListFile.exists()) {
@@ -233,6 +248,17 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         }
         minecraftGame = YamlConfiguration.loadConfiguration(minecraftGameFile);
 
+        prefixesFile = new File(getDataFolder(), "prefixes.yml");
+        if (!prefixesFile.exists()) {
+            try {
+                prefixesFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().warning("Failed to create prefixes.yml!");
+            }
+        }
+
+        prefixes = YamlConfiguration.loadConfiguration(prefixesFile);
+
         nicksListFile = new File(getDataFolder(), "nicks.yml");
         if (!nicksListFile.exists()) {
             try {
@@ -255,9 +281,12 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         }
 
         loadSettings();
+        loadLootboxes();
         saveSettings();
 
         setupChat();
+        setupPermissions();
+        circuitChat = new CircuitChat(perms);
         registerEconomy();
 
         Plugin vault = getServer().getPluginManager().getPlugin("Vault");
@@ -296,6 +325,8 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
             }
         }
 
+
+
         /*for(Player i : Bukkit.getOnlinePlayers()) {
             scores.put(i.getUniqueId(), scoreList.getInt("scores." + i.getUniqueId() + ".score"));
         }*/
@@ -325,7 +356,8 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
             public void run() {
                 updateTablist();
             }
-        }.runTaskTimer(this, 0L, 100L);
+        }.runTaskTimer(this, 0L, 10L);
+
 
         // Register commands
         getCommand("circuitaddons").setExecutor(new circuitaddons());
@@ -355,7 +387,16 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         getCommand("heal").setExecutor(new heal());
         getCommand("nick").setExecutor(new nick());
         getCommand("unnick").setExecutor(new unnick());
-        getCommand("npc").setExecutor(new npc());
+        getCommand("fancychat").setExecutor(new FancyChat());
+        getCommand("prefix").setExecutor(new SetPrefixCommand(circuitChat));
+        getCommand("permissions").setExecutor(new Permissions());
+        getCommand("vanish").setExecutor(new VanishCommand());
+        getCommand("namecolor").setExecutor(new NameColor());
+        getCommand("fireball").setExecutor(new FireBall());
+        getCommand("lootbox").setExecutor(new LootboxCommand());
+        getCommand("lootboxes").setExecutor(new LootboxesCommand());
+        getCommand("del").setExecutor(new DelCommand(new LootboxManager()));
+        getCommand("display").setExecutor(new DisplayCommand());
 
         startScoreboardUpdater();
 
@@ -367,31 +408,47 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
                         String nickname = nicksList.getString("nicks." + i + ".text", player.getName());
                         player.setDisplayName(nickname);
                         player.setPlayerListName(nickname);
-                        LuckPerms luckPerms = LuckPermsProvider.get();
-                        User user = luckPerms.getUserManager().getUser(player.getUniqueId());
-                        if (user != null) {
-                            MetaNode node = MetaNode.builder("nickname", nickname).build();
-                            user.data().add(node);
-                            luckPerms.getUserManager().saveUser(user);
-
-                            // Ensure LuckPerms applies changes immediately
-                            luckPerms.getUserManager().loadUser(player.getUniqueId()).thenAccept(updatedUser -> {
-                                Bukkit.getScheduler().runTask(this, () -> {
-                                    player.setPlayerListName(nickname);
-                                });
-                            });
-                        }
                     }
                 }
             }
         }
+
+        if (prefixes.getConfigurationSection("prefixes") != null) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                String uuid = player.getUniqueId().toString();
+
+                if (prefixes.contains("prefixes." + uuid)) {
+                    String prefix = prefixes.getString("prefixes." + uuid);
+                    player.setDisplayName(prefix + player.getName());
+                    player.setPlayerListName(prefix + player.getName());
+                }
+            }
+        }
+
 
 
         Bukkit.getPluginManager().registerEvents(new InventoryOpenListener(),this);
         Bukkit.getPluginManager().registerEvents(new InventoryClickListener(), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(), this);
         Bukkit.getPluginManager().registerEvents(new PlayerDeathListener(), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerInteractListener(), this);
+        Bukkit.getPluginManager().registerEvents(new EntityExplodeListener(), this);
+        Bukkit.getPluginManager().registerEvents(new EnderManShortBow(), this);
+        Bukkit.getPluginManager().registerEvents(new LightningSword(), this);
+        Bukkit.getPluginManager().registerEvents(new WardenShortBow(), this);
+        Bukkit.getPluginManager().registerEvents(new FlameSword(), this);
+        Bukkit.getPluginManager().registerEvents(new EntityDamageByEntityListener(), this);
+        Bukkit.getServer().getPluginManager().registerEvents(new LootboxListener(), this);
         Bukkit.getPluginManager().registerEvents(this, this);
+
+        new EnderManShortBow();
+        EnderManShortBow.registerRecipe();
+        new LightningSword();
+        LightningSword.registerRecipe();
+        new WardenShortBow();
+        WardenShortBow.registerRecipe();
+        new FlameSword();
+        FlameSword.registerRecipe();
 
 
         if(settings.getString("settings.prefix") == null) {
@@ -425,12 +482,16 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         }
         for(Player i : Bukkit.getOnlinePlayers())
             createScoreBoard(i);
+
+        circuitChat.loadChat(prefixes);
     }
 
 
 
     @Override
     public void onDisable() {
+        saveLootboxes();
+        circuitChat.saveChat(prefixesFile, prefixes);
         if (settings.getString("settings.prefix") == null) {
             PREFIX = "";
         } else {
@@ -459,65 +520,63 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-
-        itemsFile = new File(Bukkit.getPluginManager().getPlugin("CircuitAddons").getDataFolder(), "items.yml");
-
-        if (!itemsFile.exists()) {
-            try {
-                itemsFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        items = YamlConfiguration.loadConfiguration(itemsFile);
-
-        if (!items.contains("items")) {
-            items.createSection("items");
-        }
-
-
-        joinSync();
-
-        List<Integer> colorValues = settings.getIntegerList("events.playerJoin.fireworks.color");
-
         Player player = event.getPlayer();
         String uuid = player.getUniqueId().toString();
         Location location = player.getLocation();
 
-        if (colorValues.size() == 3) {
-            Color color = Color.fromRGB(colorValues.get(0), colorValues.get(1), colorValues.get(2));
-            if (settings.getBoolean("events.playerJoin.fireworks.enabled")) {
-                String fireworkTypeStr = settings.getString("events.playerJoin.fireworks.pattern", "BALL"); // Default to BALL if missing
+        if (circuitChat != null) {
+            String prefix = circuitChat.getPlayerPrefix(player);
+            if (prefix == null) prefix = "";
+            player.setDisplayName(prefix + player.getName());
+            player.setPlayerListName(prefix + player.getName());
+            circuitChat.loadChat(prefixes);
+        }
+
+        if (itemsFile == null) {
+            itemsFile = new File(getInstance().getDataFolder(), "items.yml");
+            if (!itemsFile.exists()) {
                 try {
-                    FireworkEffect.Type fireworkType = FireworkEffect.Type.valueOf(fireworkTypeStr.toUpperCase());
-                    spawnFirework(location, fireworkType, color, 10);
-                } catch (IllegalArgumentException e) {
-                    Bukkit.getLogger().warning("Invalid firework pattern in settings.yml: " + fireworkTypeStr);
+                    itemsFile.createNewFile();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
-        } else {
-            Bukkit.getLogger().warning("Invalid firework color in settings.yml!");
+            items = YamlConfiguration.loadConfiguration(itemsFile);
+            if (!items.contains("items")) {
+                items.createSection("items");
+            }
+        }
+
+        joinSync();
+
+        if (settings.getBoolean("events.playerJoin.fireworks.enabled")) {
+            List<Integer> colorValues = settings.getIntegerList("events.playerJoin.fireworks.color");
+            if (colorValues.size() == 3) {
+                Color color = Color.fromRGB(colorValues.get(0), colorValues.get(1), colorValues.get(2));
+                try {
+                    FireworkEffect.Type fireworkType = FireworkEffect.Type.valueOf(settings.getString("events.playerJoin.fireworks.pattern", "BALL").toUpperCase());
+                    spawnFirework(location, fireworkType, color, 10);
+                } catch (IllegalArgumentException e) {
+                    Bukkit.getLogger().warning("Invalid firework pattern in settings.yml!");
+                }
+            } else {
+                Bukkit.getLogger().warning("Invalid firework color in settings.yml!");
+            }
+        }
+
+        if (settings.getBoolean("events.playerJoin.title.enabled")) {
+            String title = ChatColor.translateAlternateColorCodes('&', settings.getString("events.playerJoin.title.title", "&6Welcome To {server_name}!"))
+                    .replace("{server_name}", settings.getString("settings.server_name", "the server"));
+            String subtitle = ChatColor.translateAlternateColorCodes('&', settings.getString("events.playerJoin.title.subtitle", "&bHave fun!"))
+                    .replace("{server_name}", settings.getString("settings.server_name", "the server"));
+            player.sendTitle(title, subtitle, 10, 20, 10);
         }
 
         boolean joinMessageEnabled = settings.getBoolean("settings.joinMessage");
-        boolean joinTitleEnabled = settings.getBoolean("events.playerJoin.title.enabled");
-
-        if (joinTitleEnabled) {
-            String titleRaw = ChatColor.translateAlternateColorCodes('&',settings.getString("events.playerJoin.title.title", "&6Welcome To {server_name}!"));
-            String subtitleRaw = ChatColor.translateAlternateColorCodes('&',settings.getString("events.playerJoin.title.subtitle", "&bHave fun!"));
-
-            titleRaw = titleRaw.replace("{server_name}", settings.getString("settings.server_name", "the server"));
-            subtitleRaw = subtitleRaw.replace("{server_name}", settings.getString("settings.server_name", "the server"));
-
-
-            player.sendTitle(titleRaw, subtitleRaw, 10, 20, 10);
-        }
+        List<String> players = settings.getStringList("players");
+        String messageRaw;
 
         if (joinMessageEnabled) {
-            List<String> players = settings.getStringList("players");
-            String messageRaw;
-
             if (players.contains(uuid)) {
                 messageRaw = settings.getString("messages.joinMessage", "Welcome back {player}!")
                         .replace("{player}", player.getName())
@@ -531,8 +590,7 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
                         .replace("{player}", player.getName())
                         .replace("{server_name}", settings.getString("settings.server_name", "Your server"));
 
-                List<String> items = settings.getStringList("rewards.firstJoin.items");
-                for (String item : items) {
+                for (String item : settings.getStringList("rewards.firstJoin.items")) {
                     String[] parts = item.split(":");
                     if (parts.length == 2) {
                         try {
@@ -545,10 +603,10 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
                     }
                 }
             }
-
             player.sendMessage(messageRaw);
         }
     }
+
 
 
     public void saveSettings() {
@@ -598,6 +656,8 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         blacklist = loadOrCreateFile("blacklist.yml");
         scoreList = loadOrCreateFile("scoreList.yml");
         nicksList = loadOrCreateFile("nicks.yml");
+        prefixes = loadOrCreateFile("prefixes.yml");
+        lootboxes = loadOrCreateFile("lootboxes.yml");
     }
 
     private String getDefaultConfigContents() {
@@ -673,7 +733,7 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         instance.loadSettings(); // Reload settings.yml
         instance.saveSettings();
 
-
+        loadLootboxes();
 
         // Correctly refresh the scoreboard
 
@@ -720,30 +780,6 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
     public static Economy getEconomy() {
         return econ;
     }
-
-    @EventHandler
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
-
-        if (chat == null || perms == null) return;
-
-        String prefix = chat.getPlayerPrefix(event.getPlayer());
-        String suffix = chat.getPlayerSuffix(event.getPlayer());
-
-        if (prefix == null) prefix = "";
-        if (suffix == null) suffix = "";
-
-        // Convert legacy color codes (& -> §)
-        prefix = ChatColor.translateAlternateColorCodes('&', prefix);
-        suffix = ChatColor.translateAlternateColorCodes('&', suffix);
-
-        // Convert & codes in the message as well
-        String legacyMessage = ChatColor.translateAlternateColorCodes('&', event.getMessage());
-
-        // Set formatted chat message
-        event.setFormat(prefix + "%s" + suffix + ": " + legacyMessage);
-    }
-
-
 
     public static void loadBanks() {
         File dataFolder = Bukkit.getPluginManager().getPlugin("CircuitAddons").getDataFolder();
@@ -798,7 +834,6 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         ItemStack item = makeItem(Material.DIAMOND,ChatColor.GOLD + "" + ChatColor.BOLD + "Win Diamond",List.of(ChatColor.GRAY + "Obtained by winning slot guesser"),new HashMap<>(), false);
         return item;
     }
-    private void registerRecipies() {}
     private Objective objective;
 
     private String parsePlaceholders(Player player, String input) {
@@ -844,29 +879,32 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
         instance.currentScoreboard = board;
     }
 
-    public String getLuckPermsPrefix(Player player) {
-        User user = luckPerms.getUserManager().getUser(player.getUniqueId());
-        if (user == null) return "";
-
-        return ChatColor.translateAlternateColorCodes('&', user.getCachedData().getMetaData(QueryOptions.defaultContextualOptions()).getPrefix());
-    }
-
-    private void updateTablist() {
+    public static void updateTablist() {
         String header = ChatColor.translateAlternateColorCodes('&', settings.getString("settings.tablist.header", "You are using Circuit Addons!") + "\n");
         String footer = "\n" + ChatColor.translateAlternateColorCodes('&', settings.getString("settings.tablist.footer", "Online players: " + Bukkit.getOnlinePlayers().size()));
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            String prefix = getLuckPermsPrefix(player);
+            String prefix = circuitChat.getPlayerPrefix(player);
             String displayName = player.getName();
 
             if (nicksList.getBoolean("nicks." + player.getName() + ".state", false)) {
                 displayName = nicksList.getString("nicks." + player.getName() + ".text", player.getName());
             }
 
+            // Get the player's current color from their display name
+            ChatColor nameColor = ChatColor.WHITE; // Default color
+            for (ChatColor chatColor : ChatColor.values()) {
+                if (player.getDisplayName().contains(chatColor.toString())) {
+                    nameColor = chatColor;
+                    break;
+                }
+            }
+
             player.setPlayerListHeaderFooter(header, footer);
-            player.setPlayerListName(prefix + displayName);
+            player.setPlayerListName(prefix + nameColor + displayName);
         }
     }
+
 
     @EventHandler
     public void onServerPing(ServerListPingEvent event) {
@@ -877,6 +915,6 @@ public final class CircuitAddons extends JavaPlugin implements Listener {
             linesFormatted.append(ChatColor.translateAlternateColorCodes('&', line)).append("\n");
         }
 
-        event.setMotd(linesFormatted.toString().trim()); // Set the MOTD
+        event.setMotd(linesFormatted.toString().trim());
     }
 }

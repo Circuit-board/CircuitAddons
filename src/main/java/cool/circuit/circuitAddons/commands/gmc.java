@@ -16,6 +16,11 @@ public class gmc implements CommandExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.gmc")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         player.setGameMode(GameMode.CREATIVE);
 
         return true;

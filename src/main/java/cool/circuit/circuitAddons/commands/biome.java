@@ -21,6 +21,11 @@ public class biome  implements CommandExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.biome")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         Location location = player.getLocation();
         Biome biome = player.getWorld().getBiome(location);
         player.sendMessage(PREFIX + "You are in the " + biome.toString().toLowerCase(Locale.ROOT).replace("_"," ") + " biome!");

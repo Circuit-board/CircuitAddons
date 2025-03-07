@@ -37,6 +37,11 @@ public class sethome implements TabExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.sethome")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         Location location = player.getLocation();
 
         // Save home location

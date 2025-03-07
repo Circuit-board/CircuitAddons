@@ -23,7 +23,10 @@ public class mute implements TabExecutor {
             sender.sendMessage(ChatColor.RED + "Usage: /mute <player>");
             return true;
         }
-
+        if(!sender.hasPermission("circuitaddons.mute")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
         Player target = Bukkit.getPlayer(args[0]);
 
         if (target == null || target.getUniqueId() == null) {

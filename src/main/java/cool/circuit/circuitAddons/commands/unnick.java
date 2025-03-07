@@ -20,6 +20,11 @@ public class unnick implements CommandExecutor {
             return false;
         }
 
+        if(!(player.hasPermission("circuitaddons.unnick"))) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         boolean isNicked = nicksList.getBoolean("nicks." + player.getName() + ".state", false);
         if (!isNicked) {
             sender.sendMessage(ChatColor.RED + "You are not nicked!");

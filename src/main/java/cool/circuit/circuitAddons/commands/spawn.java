@@ -20,6 +20,10 @@ public class spawn implements CommandExecutor {
             sender.sendMessage(ChatColor.RED + "Only players can use this command!");
             return false;
         }
+        if(!sender.hasPermission("circuitaddons.spawn")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
 
         String path = "spawn";
 

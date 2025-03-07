@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static cool.circuit.circuitAddons.CircuitAddons.*;
+import static cool.circuit.circuitAddons.managers.LootboxManager.saveLootboxes;
 
 public class circuitaddons implements TabExecutor {
 
@@ -25,6 +26,11 @@ public class circuitaddons implements TabExecutor {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "Only players can use this command.");
             return false; // Stop command execution if not a player
+        }
+
+        if(!sender.hasPermission("circuitaddons.circuitaddons")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
         }
 
         // If there is one argument
@@ -50,8 +56,9 @@ public class circuitaddons implements TabExecutor {
                     player.sendMessage(getInstance().PREFIX + "Use /ca menu for detailed instructions on stuff :)");
                 }
                 case "info" -> {
-                    player.sendMessage(getInstance().PREFIX + "Version: 1.1.5, Author, CircuitBoard (Circuit)");
+                    player.sendMessage(getInstance().PREFIX + "Version: 1.2.1, Author, CircuitBoard (Circuit)");
                 }
+
                 case "update" -> {
                     if (instance.settingsFile.exists()) {
                         if (instance.settingsFile.delete()) {

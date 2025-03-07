@@ -28,6 +28,11 @@ public class manage implements CommandExecutor, Listener {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.manage")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         if (CircuitAddons.getSettings().getBoolean("guis.manage.enabled")) {
 
             Player player = (Player) sender;

@@ -17,6 +17,10 @@ public class minecraft implements CommandExecutor {
             sender.sendMessage(ChatColor.RED + "Only players can use this command!");
             return false;
         }
+        if(!sender.hasPermission("circuitaddons.minecraft")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
 
          MineCraft menu = new MineCraft(getMenuUtility(player));
         menu.open();

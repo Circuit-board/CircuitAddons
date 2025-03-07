@@ -16,6 +16,11 @@ public class gms implements CommandExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.gms")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         player.setGameMode(GameMode.SURVIVAL);
 
         return true;

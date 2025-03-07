@@ -18,6 +18,11 @@ public class slotguesser implements CommandExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.slotguesser")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         slotguesser_main menu = new slotguesser_main(getMenuUtility(player));
         menu.open();
         return true;

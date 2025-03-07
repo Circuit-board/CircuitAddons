@@ -20,6 +20,11 @@ public class blacklist implements TabExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String s, @NotNull String @NotNull [] args) {
         if (args.length != 2) return false; // Simplified argument check
 
+        if(!sender.hasPermission("circuitaddons.blacklist")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         String action = args[0].toLowerCase();
         String word = args[1].toLowerCase();
 

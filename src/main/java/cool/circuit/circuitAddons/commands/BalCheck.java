@@ -28,6 +28,11 @@ public class BalCheck implements TabExecutor {
             return true;
         }
 
+        if(!sender.hasPermission("circuitaddons.balcheck")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         joinSync();
 
         String targetName = args[0];

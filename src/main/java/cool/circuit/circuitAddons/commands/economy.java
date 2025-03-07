@@ -28,6 +28,11 @@ public class economy implements TabExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.economy")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         joinSync();
 
         if (args.length < 3) {

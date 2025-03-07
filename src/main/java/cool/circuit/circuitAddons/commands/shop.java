@@ -28,6 +28,11 @@ public class shop implements TabExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.shop")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         Player player = (Player) sender;
 
         if(args[0].equalsIgnoreCase("browse")) {

@@ -16,6 +16,11 @@ public class gmsp implements CommandExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.gmsp")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         player.setGameMode(GameMode.SPECTATOR);
 
         return true;

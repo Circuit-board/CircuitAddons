@@ -6,7 +6,7 @@
 
     <groupId>cool.circuit</groupId>
     <artifactId>CircuitAddons</artifactId>
-    <version>1.1.6</version>
+    <version>1.2.1</version>
     <packaging>jar</packaging>
 
     <name>CircuitAddons</name>
@@ -46,7 +46,7 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.2</version>
                 <configuration>
-                    <outputDirectory>${project.build.directory}/plugins</outputDirectory>
+                    <outputDirectory>C:\Users\karen\OneDrive\Desktop\CircuitAddons\plugins</outputDirectory>
                 </configuration>
             </plugin>
         </plugins>
@@ -97,12 +97,6 @@
             <groupId>me.clip</groupId>
             <artifactId>placeholderapi</artifactId>
             <version>2.11.6</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.luckperms</groupId>
-            <artifactId>api</artifactId>
-            <version>5.4</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

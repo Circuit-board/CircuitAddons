@@ -1,5 +1,5 @@
 name: CircuitAddons
-version: '1.1.5'
+version: '1.2.1'
 main: cool.circuit.circuitAddons.CircuitAddons
 api-version: '1.21'
 
@@ -83,7 +83,32 @@ commands:
   unnick:
     description: 'Removes a nick name from a player'
     permission: circuitaddons.unnick
-  npc:
-    description: 'Creates an npc'
-    permission: circuitaddons.npc
-depend: [Vault, PlaceholderAPI, LuckPerms]
+  fancychat:
+    description: 'Send a fancy chat message!'
+    permission: circuitaddons.fancychat
+  prefix:
+    description: 'Set a players prefix!'
+    permission: circuitaddons.prefix
+  permissions:
+    description: 'Handles groups and permissions!'
+    permission: circutiaddons.permissions
+  vanish:
+    description: 'Vanishes yourself'
+    permission: circuitaddons.vanish
+  namecolor:
+    description: 'Changes the color of your name!'
+    permission: circuitaddons.namecolor
+  fireball:
+    description: 'Gives a player a fireball'
+    permission: circuitaddons.fireball
+  lootbox:
+    description: 'Opens the lootbox manager menu!'
+    permission: circuitaddons.lootbox
+  lootboxes:
+    description: 'Lootbox stuff'
+  del:
+    description: 'Deletes stuff'
+  display:
+    description: 'Displays stuff'
+
+depend: [Vault, PlaceholderAPI]

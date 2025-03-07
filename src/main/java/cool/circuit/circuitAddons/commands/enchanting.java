@@ -17,6 +17,11 @@ public class enchanting implements CommandExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.enchanting")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         cool.circuit.circuitAddons.menusystem.menus.enchanting menu = new cool.circuit.circuitAddons.menusystem.menus.enchanting(getMenuUtility(player));
         menu.open();
 

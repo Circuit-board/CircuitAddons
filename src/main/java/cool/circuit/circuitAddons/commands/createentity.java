@@ -24,6 +24,11 @@ public class createentity implements TabExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.createentity")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         if (args.length < 5) {
             sender.sendMessage(ChatColor.RED + "Usage: /createentity <entity_type> <health> <speed multiplier> <damage multiplier> <custom_name...>");
             return false;

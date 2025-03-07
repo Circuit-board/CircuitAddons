@@ -17,6 +17,10 @@ public class paintdrying implements CommandExecutor {
             sender.sendMessage(ChatColor.RED + "Only players can use this command");
             return false;
         }
+        if(!sender.hasPermission("circuitaddons.paintdrying")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
 
         paintdrying_main menu = new paintdrying_main(getMenuUtility(player));
         menu.open();

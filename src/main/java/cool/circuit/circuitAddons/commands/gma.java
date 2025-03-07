@@ -16,6 +16,11 @@ public class gma implements CommandExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.gma")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         player.setGameMode(GameMode.ADVENTURE);
 
         return true;

@@ -21,6 +21,10 @@ public class nick implements TabExecutor {
             sender.sendMessage(ChatColor.RED + "Only players can use this command.");
             return true;
         }
+        if(!sender.hasPermission("circuitaddons.nick")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
 
         boolean isNickedCheck1 = nicksList.getBoolean("nicks." + player.getName() + ".state", false);
         String isNickedCheck2 = nicksList.getString("nicks." + player.getName() + ".text");

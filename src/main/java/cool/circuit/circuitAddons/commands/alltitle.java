@@ -24,6 +24,11 @@ public class alltitle implements TabExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.alltitle")) {
+            sender.sendMessage(org.bukkit.ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         Player player = (Player) sender;
 
         if (CircuitAddons.getSettingsFile().getBoolean("guis.alltitle.enabled")) {

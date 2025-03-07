@@ -17,6 +17,11 @@ public class heal implements CommandExecutor {
             return false;
         }
 
+        if(!sender.hasPermission("circuitaddons.heal")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command!");
+            return false;
+        }
+
         player.setHealth(player.getMaxHealth());
         player.sendMessage(PREFIX + "You have been succesfully healed!");
 
